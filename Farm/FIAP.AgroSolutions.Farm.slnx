@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FIAP.AgroSolutions.Farm.Api/FIAP.AgroSolutions.Farm.Api.csproj" />
+    <Project Path="src/FIAP.AgroSolutions.Farm.Application/FIAP.AgroSolutions.Farm.Application.csproj" />
+    <Project Path="src/FIAP.AgroSolutions.Farm.Domain/FIAP.AgroSolutions.Farm.Domain.csproj" />
+    <Project Path="src/FIAP.AgroSolutions.Farm.Infrastructure/FIAP.AgroSolutions.Farm.Infrastructure.csproj" />
+  </Folder>
+</Solution>

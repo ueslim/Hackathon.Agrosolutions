@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FIAP.AgroSolutions.SensorIngestion.Api/FIAP.AgroSolutions.SensorIngestion.Api.csproj" />
+    <Project Path="src/FIAP.AgroSolutions.SensorIngestion.Application/FIAP.AgroSolutions.SensorIngestion.Application.csproj" />
+    <Project Path="src/FIAP.AgroSolutions.SensorIngestion.Domain/FIAP.AgroSolutions.SensorIngestion.Domain.csproj" />
+    <Project Path="src/FIAP.AgroSolutions.SensorIngestion.Infrastructure/FIAP.AgroSolutions.SensorIngestion.Infrastructure.csproj" />
+  </Folder>
+</Solution>
