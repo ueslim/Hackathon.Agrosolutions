@@ -50,6 +50,23 @@ else
 
 builder.Services.AddAuthorization();
 
+// CORS
+var isDevelopment = builder.Environment.IsDevelopment();
+
+if (isDevelopment)
+{
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("Total",
+            builder =>
+                builder
+                    .AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader());
+    });
+}
+
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -65,10 +82,9 @@ using (var scope = app.Services.CreateScope())
 
 app.UseSwagger();
 app.UseSwaggerUI();
-
+app.UseCors("Total");
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 app.MapGet("/health", () => Results.Ok("ok"));
 

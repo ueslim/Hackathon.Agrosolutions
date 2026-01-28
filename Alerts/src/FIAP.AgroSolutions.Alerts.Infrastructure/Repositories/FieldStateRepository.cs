@@ -11,6 +11,18 @@ public class FieldStateRepository : IFieldStateRepository
 
     public FieldStateRepository(AlertsDbContext db) => _db = db;
 
+    public async Task<List<FieldState>> GetStaleAsync(DateTime olderThanUtc, CancellationToken ct)
+    {
+        olderThanUtc = olderThanUtc.Kind == DateTimeKind.Utc
+            ? olderThanUtc
+            : DateTime.SpecifyKind(olderThanUtc, DateTimeKind.Utc);
+
+        return await _db.FieldStates
+            .AsNoTracking()
+            .Where(x => x.LastReadingAtUtc != null && x.LastReadingAtUtc < olderThanUtc)
+            .ToListAsync(ct);
+    }
+
     public async Task<FieldState?> GetAsync(Guid fieldId, CancellationToken ct)
     {
         return await _db.FieldStates

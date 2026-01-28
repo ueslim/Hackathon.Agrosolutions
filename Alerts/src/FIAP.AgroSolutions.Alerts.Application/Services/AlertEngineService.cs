@@ -13,7 +13,6 @@ public class AlertEngineService
     private readonly IReadingsQuery _readings;
     private readonly IUnitOfWork _uow;
 
-
     public AlertEngineService(IFieldStateRepository states, IAlertRepository alerts, IAlertRuleRepository rules, IReadingsQuery readings, IUnitOfWork uow)
     {
         _states = states;
@@ -26,6 +25,7 @@ public class AlertEngineService
     public async Task ProcessAsync(SensorReadingReceivedEvent evt, CancellationToken ct)
     {
         var measuredAtUtc = EnsureUtc(evt.MeasuredAtUtc);
+        var receivedAtUtc = EnsureUtc(evt.ReceivedAtUtc);
 
         await _readings.AddAsync(new SensorReading
         {
@@ -35,7 +35,7 @@ public class AlertEngineService
             TemperatureC = evt.TemperatureC,
             RainMm = evt.RainMm,
             MeasuredAtUtc = measuredAtUtc,
-            ReceivedAtUtc = measuredAtUtc
+            ReceivedAtUtc = receivedAtUtc
         }, ct);
 
         var state = await _states.GetAsync(evt.FieldId, ct)
@@ -47,7 +47,7 @@ public class AlertEngineService
         state.LastSoilMoisturePercent = evt.SoilMoisturePercent;
         state.LastTemperatureC = evt.TemperatureC;
         state.LastRainMm = evt.RainMm;
-        state.UpdatedAtUtc = DateTime.UtcNow;
+        state.UpdatedAtUtc = receivedAtUtc;
 
         var rules = await _rules.GetEnabledAsync(ct);
 
@@ -100,7 +100,7 @@ public class AlertEngineService
         {
             ruleState.WindowStartUtc = null;
             ruleState.AlertActive = false;
-            ruleState.UpdatedAtUtc = DateTime.UtcNow;
+            ruleState.UpdatedAtUtc = measuredAtUtc;
             return;
         }
 
@@ -108,29 +108,43 @@ public class AlertEngineService
         {
             ruleState.WindowStartUtc = measuredAtUtc;
             ruleState.AlertActive = false;
-            ruleState.UpdatedAtUtc = DateTime.UtcNow;
+            ruleState.UpdatedAtUtc = measuredAtUtc;
             return;
         }
 
         var duration = measuredAtUtc - ruleState.WindowStartUtc.Value;
 
-        if (!ruleState.AlertActive && duration >= window)
+        if (duration < window)
         {
-            var alert = new Alert
-            {
-                FieldId = fieldId,
-                Type = rule.Type,
-                Severity = rule.Severity,
-                Message = RenderMessage(rule, measuredAtUtc),
-                TriggeredAtUtc = DateTime.UtcNow
-            };
-
-            await _alerts.AddAsync(alert, ct);
-
-            ruleState.AlertActive = true;
-            ruleState.LastTriggeredAtUtc = measuredAtUtc;
-            ruleState.UpdatedAtUtc = DateTime.UtcNow;
+            ruleState.UpdatedAtUtc = measuredAtUtc;
+            return;
         }
+
+        var hasActive = await _alerts.HasActiveAsync(fieldId, rule.Type, ct);
+        if (hasActive)
+        {
+            ruleState.AlertActive = true;
+            ruleState.UpdatedAtUtc = measuredAtUtc;
+            return;
+        }
+
+        var alert = new Alert
+        {
+            FieldId = fieldId,
+            Type = rule.Type,
+            Severity = rule.Severity,
+            Message = RenderMessage(rule, measuredAtUtc),
+            TriggeredAtUtc = measuredAtUtc
+        };
+
+        await _alerts.AddAsync(alert, ct);
+
+        ruleState.AlertActive = true;
+        ruleState.LastTriggeredAtUtc = measuredAtUtc;
+
+        ruleState.WindowStartUtc = measuredAtUtc;
+
+        ruleState.UpdatedAtUtc = measuredAtUtc;
     }
 
     private async Task ApplyInstantCooldownAsync(AlertRule rule, RuleState ruleState, Guid fieldId, bool isInCondition, DateTime measuredAtUtc, decimal metricValue, CancellationToken ct)
@@ -138,7 +152,16 @@ public class AlertEngineService
         if (!isInCondition)
         {
             ruleState.AlertActive = false;
-            ruleState.UpdatedAtUtc = DateTime.UtcNow;
+            ruleState.UpdatedAtUtc = measuredAtUtc;
+            return;
+        }
+
+        var hasActive = await _alerts.HasActiveAsync(fieldId, rule.Type, ct);
+
+        if (hasActive)
+        {
+            ruleState.AlertActive = true;
+            ruleState.UpdatedAtUtc = measuredAtUtc;
             return;
         }
 
@@ -153,7 +176,6 @@ public class AlertEngineService
             return;
         }
 
-        // severidade dinâmica para chuva muito alta (sem mudar regra no banco)
         var severity = rule.Severity;
         if (rule.Type == AlertType.HeavyRain && metricValue >= 50m)
         {
@@ -166,22 +188,47 @@ public class AlertEngineService
             Type = rule.Type,
             Severity = severity,
             Message = RenderMessage(rule, measuredAtUtc, metricValue),
-            TriggeredAtUtc = DateTime.UtcNow
+            TriggeredAtUtc = measuredAtUtc
         };
 
         await _alerts.AddAsync(alert, ct);
 
         ruleState.AlertActive = true;
         ruleState.LastTriggeredAtUtc = measuredAtUtc;
-        ruleState.UpdatedAtUtc = DateTime.UtcNow;
+        ruleState.UpdatedAtUtc = measuredAtUtc;
     }
-
-
 
     private async Task ApplyWindowSumThresholdAsync(AlertRule rule, RuleState ruleState, Guid fieldId, DateTime measuredAtUtc, CancellationToken ct)
     {
         if (rule.DurationMinutes is null || rule.DurationMinutes <= 0)
         {
+            return;
+        }
+
+        var window = TimeSpan.FromMinutes(rule.DurationMinutes.Value);
+        var fromUtc = measuredAtUtc - window;
+
+        var count = await _readings.CountReadingsAsync(fieldId, fromUtc, measuredAtUtc, ct);
+        if (count < 10)
+        {
+            return;
+        }
+
+        var sum = await _readings.SumRainAsync(fieldId, fromUtc, measuredAtUtc, ct);
+        var isInCondition = Compare(sum, rule.Operator, rule.ThresholdValue);
+
+        if (!isInCondition)
+        {
+            ruleState.AlertActive = false;
+            ruleState.UpdatedAtUtc = measuredAtUtc;
+            return;
+        }
+
+        var hasActive = await _alerts.HasActiveAsync(fieldId, rule.Type, ct);
+        if (hasActive)
+        {
+            ruleState.AlertActive = true;
+            ruleState.UpdatedAtUtc = measuredAtUtc;
             return;
         }
 
@@ -196,44 +243,20 @@ public class AlertEngineService
             return;
         }
 
-        var window = TimeSpan.FromMinutes(rule.DurationMinutes.Value);
-        var fromUtc = measuredAtUtc - window;
-
-        var count = await _readings.CountReadingsAsync(fieldId, fromUtc, measuredAtUtc, ct);
-
-        // não avalia agregação se não tiver histórico mínimo
-        if (count < 10)
-        {
-            return;
-        }
-
-
-        // Ex: soma de chuva últimos 7 dias
-        var sum = await _readings.SumRainAsync(fieldId, fromUtc, measuredAtUtc, ct);
-
-        var isInCondition = Compare(sum, rule.Operator, rule.ThresholdValue);
-
-        if (!isInCondition)
-        {
-            ruleState.AlertActive = false;
-            ruleState.UpdatedAtUtc = DateTime.UtcNow;
-            return;
-        }
-
         var alert = new Alert
         {
             FieldId = fieldId,
             Type = rule.Type,
             Severity = rule.Severity,
             Message = RenderMessage(rule, measuredAtUtc, sum),
-            TriggeredAtUtc = DateTime.UtcNow
+            TriggeredAtUtc = measuredAtUtc
         };
 
         await _alerts.AddAsync(alert, ct);
 
         ruleState.AlertActive = true;
         ruleState.LastTriggeredAtUtc = measuredAtUtc;
-        ruleState.UpdatedAtUtc = DateTime.UtcNow;
+        ruleState.UpdatedAtUtc = measuredAtUtc;
     }
 
     private async Task ApplyDualMetricDurationAsync(AlertRule rule, RuleState ruleState, Guid fieldId, SensorReadingReceivedEvent evt, DateTime measuredAtUtc, CancellationToken ct)
@@ -248,15 +271,13 @@ public class AlertEngineService
             return;
         }
 
-        // cond 1: métrica principal (ex: umidade >= 70)
         var v1 = GetMetricValue(rule.Metric, evt);
         var cond1 = Compare(v1, rule.Operator, rule.ThresholdValue);
 
-        // cond 2: faixa na secondary (ex: temp 20..32)
-        var v2 = GetMetricValue(rule.SecondaryMetric!.Value, evt);
-        var cond2 =
-            v2 >= rule.SecondaryMinValue.GetValueOrDefault(decimal.MinValue) &&
-            v2 <= rule.SecondaryMaxValue.GetValueOrDefault(decimal.MaxValue);
+        var v2 = GetMetricValue(rule.SecondaryMetric.Value, evt);
+        var min2 = rule.SecondaryMinValue ?? decimal.MinValue;
+        var max2 = rule.SecondaryMaxValue ?? decimal.MaxValue;
+        var cond2 = v2 >= min2 && v2 <= max2;
 
         var isInCondition = cond1 && cond2;
 

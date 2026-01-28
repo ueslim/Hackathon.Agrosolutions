@@ -11,14 +11,14 @@ public class FarmRepository : IFarmRepository
 
     public FarmRepository(FarmDbContext db) => _db = db;
 
-    public async Task<List<Domain.Entities.Farm>> GetAllWithFieldsAsync(CancellationToken ct)
+    public async Task<List<Domain.Entities.Farm>> GetAllWithFieldsAsync(Guid ownerUserId, CancellationToken ct)
     {
         return await _db.Farms
             .AsNoTracking()
+            .Where(f => f.OwnerUserId == ownerUserId)
             .Include(f => f.Fields)
             .ToListAsync(ct);
     }
-
 
     public Task<FarmEntity?> GetByIdAsync(Guid id, Guid ownerUserId, CancellationToken ct) =>
         _db.Farms.FirstOrDefaultAsync(x => x.Id == id && x.OwnerUserId == ownerUserId, ct);

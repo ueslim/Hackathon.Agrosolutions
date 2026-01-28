@@ -28,8 +28,25 @@ builder.Services.AddScoped<IReadingRepository, ReadingRepository>();
 builder.Services.AddScoped<IOutboxWriter, OutboxWriter>();
 builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<IngestionDbContext>());
 builder.Services.AddScoped<ReadingService>();
+builder.Services.AddScoped<SensorSimulatorService>();
 
 builder.Services.AddHostedService<OutboxPublisher>();
+
+// CORS
+var isDevelopment = builder.Environment.IsDevelopment();
+
+if (isDevelopment)
+{
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("Total",
+            builder =>
+                builder
+                    .AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader());
+    });
+}
 
 var app = builder.Build();
 
@@ -37,14 +54,10 @@ await DatabaseInitializer.EnsureDatabaseMigratedAsync(app.Services);
 
 app.UseSwagger();
 app.UseSwaggerUI();
-
-app.UseHttpsRedirection();
-
+app.UseCors("Total");
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.MapGet("/health", () => Results.Ok("ok"));
 
 app.Run();

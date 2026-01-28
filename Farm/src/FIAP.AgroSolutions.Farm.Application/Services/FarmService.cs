@@ -14,9 +14,9 @@ public class FarmService : IFarmService
         _farms = farms;
         _fields = fields;
     }
-    public async Task<List<FarmWithFieldsResponse>> GetAllFarmsWithFieldsAsync(CancellationToken ct)
+    public async Task<List<FarmWithFieldsResponse>> GetAllFarmsWithFieldsAsync(Guid userId, CancellationToken ct)
     {
-        var farms = await _farms.GetAllWithFieldsAsync(ct);
+        var farms = await _farms.GetAllWithFieldsAsync(userId, ct);
 
         return farms
             .OrderBy(f => f.Name)
@@ -111,4 +111,12 @@ public class FarmService : IFarmService
             ? null
             : new FieldResponse(f.Id, f.FarmId, f.Name, f.Crop, f.BoundaryDescription, f.CreatedAtUtc);
     }
+    public async Task<FarmResponse?> GetFarmByIdAsync(Guid userId, Guid farmId, CancellationToken ct)
+    {
+        var farm = await _farms.GetByIdAsync(farmId, userId, ct);
+        return farm is null
+            ? null
+            : new FarmResponse(farm.Id, farm.Name, farm.LocationDescription, farm.CreatedAtUtc);
+    }
+
 }

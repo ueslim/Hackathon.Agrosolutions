@@ -28,9 +28,27 @@ builder.Services.AddScoped<AlertEngineService>();
 builder.Services.AddScoped<AlertsQueryService>();
 builder.Services.AddScoped<AlertsCommandService>();
 builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AlertsDbContext>());
+builder.Services.AddScoped<SensorStaleService>();
+builder.Services.AddHostedService<SensorStaleWorker>();
 
 // Rabbit Consumer
 builder.Services.AddHostedService<SensorReadingConsumer>();
+
+// CORS
+var isDevelopment = builder.Environment.IsDevelopment();
+
+if (isDevelopment)
+{
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("Total",
+            builder =>
+                builder
+                    .AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader());
+    });
+}
 
 var app = builder.Build();
 
@@ -47,8 +65,7 @@ using (var scope = app.Services.CreateScope())
 
 app.UseSwagger();
 app.UseSwaggerUI();
-
-app.UseHttpsRedirection();
+app.UseCors("Total");
 app.MapControllers();
 app.MapGet("/health", () => Results.Ok("ok"));
 

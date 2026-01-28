@@ -37,8 +37,13 @@ public class RabbitMQHelper : IDisposable
         EnsureQueueExists(queueName);
 
         var body = Encoding.UTF8.GetBytes(message);
-        _channel.BasicPublish(exchange: "", routingKey: queueName, basicProperties: null, body: body);
+
+        var props = _channel.CreateBasicProperties();
+        props.Persistent = true;
+
+        _channel.BasicPublish(exchange: "", routingKey: queueName, basicProperties: props, body: body);
     }
+
 
     public void Dispose()
     {

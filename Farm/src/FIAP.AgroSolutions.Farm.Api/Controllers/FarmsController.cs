@@ -21,7 +21,8 @@ public class FarmsController : ControllerBase
     [HttpGet("all-with-fields")]
     public async Task<ActionResult<List<FarmWithFieldsResponse>>> GetAllWithFields(CancellationToken ct)
     {
-        return Ok(await _service.GetAllFarmsWithFieldsAsync(ct));
+        var userId = UserContext.GetUserId(HttpContext);
+        return Ok(await _service.GetAllFarmsWithFieldsAsync(userId, ct));
     }
 
     [HttpPost]
@@ -43,8 +44,7 @@ public class FarmsController : ControllerBase
     public async Task<ActionResult<FarmResponse>> GetById(Guid farmId, CancellationToken ct)
     {
         var userId = UserContext.GetUserId(HttpContext);
-        var farms = await _service.GetFarmsAsync(userId, ct);
-        var farm = farms.FirstOrDefault(x => x.Id == farmId);
+        var farm = await _service.GetFarmByIdAsync(userId, farmId, ct);
         return farm is null ? NotFound() : Ok(farm);
     }
 

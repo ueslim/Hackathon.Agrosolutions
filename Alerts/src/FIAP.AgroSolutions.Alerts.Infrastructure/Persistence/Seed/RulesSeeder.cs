@@ -27,7 +27,7 @@ public static class RulesSeeder
                 Metric = SensorMetric.SoilMoisturePercent,
                 Operator = ComparisonOp.LessThan,
                 ThresholdValue = 30m,
-                DurationMinutes = 24 * 60,
+                DurationMinutes = 2,
                 MessageTemplate = "Umidade do solo abaixo de {threshold}% por mais de 24h."
             },
 
@@ -43,7 +43,7 @@ public static class RulesSeeder
                 Metric = SensorMetric.SoilMoisturePercent,
                 Operator = ComparisonOp.GreaterThan,
                 ThresholdValue = 80m,
-                DurationMinutes = 12 * 60,
+                DurationMinutes = 2,
                 MessageTemplate = "Umidade do solo acima de {threshold}% por 12h: risco de encharcamento/doenças."
             },
 
@@ -59,7 +59,7 @@ public static class RulesSeeder
                 Metric = SensorMetric.TemperatureC,
                 Operator = ComparisonOp.GreaterOrEqual,
                 ThresholdValue = 35m,
-                DurationMinutes = 120,
+                DurationMinutes = 2,
                 MessageTemplate = "Temperatura >= {threshold}°C por 2h: estresse térmico."
             },
 
@@ -91,7 +91,7 @@ public static class RulesSeeder
                 Metric = SensorMetric.RainMm,
                 Operator = ComparisonOp.GreaterOrEqual,
                 ThresholdValue = 20m,
-                CooldownMinutes = 360,
+                CooldownMinutes = 1,
                 MessageTemplate = "Chuva forte detectada: {value}mm (limiar {threshold}mm)."
             },
 
@@ -107,8 +107,8 @@ public static class RulesSeeder
                 Metric = SensorMetric.RainMm,
                 Operator = ComparisonOp.LessThan,
                 ThresholdValue = 5m,
-                DurationMinutes = 7 * 24 * 60,
-                CooldownMinutes = 24 * 60,
+                DurationMinutes = 10,
+                CooldownMinutes = 1,
                 MessageTemplate = "Pouca chuva: soma últimos 7 dias < {threshold}mm (soma={value}mm)."
             },
 
@@ -124,13 +124,28 @@ public static class RulesSeeder
                 Metric = SensorMetric.SoilMoisturePercent,
                 Operator = ComparisonOp.GreaterOrEqual,
                 ThresholdValue = 70m,
-                DurationMinutes = 12 * 60,
-                // parâmetros extras (você precisa ter estes campos no AlertRule)
+                DurationMinutes = 2,
                 SecondaryMetric = SensorMetric.TemperatureC,
                 SecondaryMinValue = 20m,
                 SecondaryMaxValue = 32m,
                 MessageTemplate = "Risco de doença: umidade >= {threshold}% e temperatura 20-32°C por 12h."
             },
+           new AlertRule
+            {
+                RuleKey = "SensorStaleV1",
+                Name = "Sensor parado (sem leitura por 60min)",
+                IsEnabled = true,
+                Type = AlertType.SensorStale,
+                Severity = AlertSeverity.Info,
+                Kind = RuleKind.ThresholdDuration,
+                Metric = SensorMetric.SoilMoisturePercent,
+                Operator = ComparisonOp.GreaterOrEqual,
+                ThresholdValue = 0m,
+                DurationMinutes = 60,
+                CooldownMinutes = 5,
+                MessageTemplate = "Sensor sem enviar leituras há {minutes} minutos. Última leitura: {measuredAt}."
+            },
+
         };
 
         db.AlertRules.AddRange(rules);
