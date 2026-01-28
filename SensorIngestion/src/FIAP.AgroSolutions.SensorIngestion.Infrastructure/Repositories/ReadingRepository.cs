@@ -14,7 +14,6 @@ public class ReadingRepository : IReadingRepository
     public async Task AddAsync(SensorReading reading, CancellationToken ct)
     {
         await _db.SensorReadings.AddAsync(reading, ct);
-        await _db.SaveChangesAsync(ct); // salva leitura + outbox (se estiver no mesmo DbContext)
     }
 
     public async Task<List<SensorReading>> GetByFieldAsync(Guid fieldId, DateTime? fromUtc, DateTime? toUtc, int take, CancellationToken ct)

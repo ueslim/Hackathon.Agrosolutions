@@ -26,6 +26,7 @@ builder.Services.AddDbContext<IngestionDbContext>(o =>
 // DI
 builder.Services.AddScoped<IReadingRepository, ReadingRepository>();
 builder.Services.AddScoped<IOutboxWriter, OutboxWriter>();
+builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<IngestionDbContext>());
 builder.Services.AddScoped<ReadingService>();
 
 builder.Services.AddHostedService<OutboxPublisher>();

@@ -17,8 +17,5 @@ public class OutboxWriter : IOutboxWriter
             Payload = payload,
             OccurredAtUtc = occurredAtUtc
         }, ct);
-
-        // Importante: NÃO salva aqui.
-        // O SaveChanges acontece no mesmo request/transaction junto com a leitura.
     }
 }

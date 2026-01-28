@@ -1,15 +1,21 @@
-﻿using FIAP.AgroSolutions.SensorIngestion.Domain.Entities;
+﻿using FIAP.AgroSolutions.SensorIngestion.Application.Abstractions;
+using FIAP.AgroSolutions.SensorIngestion.Domain.Entities;
 using FIAP.AgroSolutions.SensorIngestion.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 
 namespace FIAP.AgroSolutions.SensorIngestion.Infrastructure.Persistence;
 
-public class IngestionDbContext : DbContext
+public class IngestionDbContext : DbContext, IUnitOfWork
 {
     public IngestionDbContext(DbContextOptions<IngestionDbContext> options) : base(options) { }
 
     public DbSet<SensorReading> SensorReadings => Set<SensorReading>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
+    public Task<int> SaveChangesAsync(CancellationToken ct)
+    {
+        return base.SaveChangesAsync(ct);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

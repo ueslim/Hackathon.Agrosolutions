@@ -9,11 +9,13 @@ public class ReadingService
 {
     private readonly IReadingRepository _readings;
     private readonly IOutboxWriter _outbox;
+    private readonly IUnitOfWork _uow;
 
-    public ReadingService(IReadingRepository readings, IOutboxWriter outbox)
+    public ReadingService(IReadingRepository readings, IOutboxWriter outbox, IUnitOfWork uow)
     {
         _readings = readings;
         _outbox = outbox;
+        _uow = uow;
     }
 
     public async Task<ReadingResponse> CreateAsync(CreateReadingRequest req, CancellationToken ct)
@@ -26,9 +28,7 @@ public class ReadingService
             SoilMoisturePercent = req.SoilMoisturePercent,
             TemperatureC = req.TemperatureC,
             RainMm = req.RainMm,
-            MeasuredAtUtc = req.MeasuredAtUtc.Kind == DateTimeKind.Utc
-                ? req.MeasuredAtUtc
-                : DateTime.SpecifyKind(req.MeasuredAtUtc, DateTimeKind.Utc),
+            MeasuredAtUtc = req.MeasuredAtUtc.Kind == DateTimeKind.Utc ? req.MeasuredAtUtc : DateTime.SpecifyKind(req.MeasuredAtUtc, DateTimeKind.Utc),
             ReceivedAtUtc = DateTime.UtcNow
         };
 
@@ -46,12 +46,9 @@ public class ReadingService
             receivedAtUtc = reading.ReceivedAtUtc
         };
 
-        await _outbox.EnqueueAsync(
-            type: "SensorReadingReceived",
-            payload: JsonSerializer.Serialize(evt),
-            occurredAtUtc: reading.ReceivedAtUtc,
-            ct: ct
-        );
+        await _outbox.EnqueueAsync(type: "SensorReadingReceived", payload: JsonSerializer.Serialize(evt), occurredAtUtc: reading.ReceivedAtUtc, ct: ct);
+
+        await _uow.SaveChangesAsync(ct);
 
         return new ReadingResponse(
             reading.Id, reading.FieldId, reading.SoilMoisturePercent, reading.TemperatureC,
@@ -69,8 +66,7 @@ public class ReadingService
             .OrderByDescending(x => x.MeasuredAtUtc)
             .Select(x => new ReadingResponse(
                 x.Id, x.FieldId, x.SoilMoisturePercent, x.TemperatureC, x.RainMm, x.MeasuredAtUtc, x.ReceivedAtUtc
-            ))
-            .ToList();
+            )).ToList();
     }
 
     private static void Validate(CreateReadingRequest req)

@@ -24,12 +24,7 @@ public class ReadingsController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType(typeof(List<ReadingResponse>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<ReadingResponse>>> GetByField(
-        [FromQuery] Guid fieldId,
-        [FromQuery] DateTime? fromUtc,
-        [FromQuery] DateTime? toUtc,
-        [FromQuery] int take = 200,
-        CancellationToken ct = default)
+    public async Task<ActionResult<List<ReadingResponse>>> GetByField([FromQuery] Guid fieldId, [FromQuery] DateTime? fromUtc, [FromQuery] DateTime? toUtc, [FromQuery] int take = 200, CancellationToken ct = default)
     {
         if (fieldId == Guid.Empty)
         {
