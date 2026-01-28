@@ -1,0 +1,6 @@
+@FIAP.AgroSolutions.Alerts.Api_HostAddress = http://localhost:5036
+
+GET {{FIAP.AgroSolutions.Alerts.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
