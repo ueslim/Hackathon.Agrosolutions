@@ -2,6 +2,13 @@
 
 namespace FIAP.AgroSolutions.Alerts.Domain.Entities;
 
+/// <summary>
+/// Representa um alerta gerado pelo sistema quando uma regra agronômica
+/// é atendida (por exemplo: seca, estresse térmico, excesso de chuva).
+/// 
+/// Um alerta é um registro histórico de um evento de risco detectado
+/// para um determinado campo agrícola e permanece ativo até ser resolvido.
+/// </summary>
 public class Alert
 {
     public Guid Id { get; set; } = Guid.NewGuid();

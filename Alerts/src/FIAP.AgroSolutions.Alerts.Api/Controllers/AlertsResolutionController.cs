@@ -18,7 +18,6 @@ public class AlertsResolutionController : ControllerBase
         _uow = uow;
     }
 
-    // ✅ POST /api/alerts/{alertId}/resolve
     [HttpPost("{alertId:guid}/resolve")]
     public async Task<IActionResult> ResolveById([FromRoute] Guid alertId, CancellationToken ct)
     {
@@ -29,7 +28,6 @@ public class AlertsResolutionController : ControllerBase
         return Ok(new ResolveResponse(count, now));
     }
 
-    // ✅ POST /api/alerts/resolve/by-type?fieldId=...&type=NoRain
     [HttpPost("resolve/by-type")]
     public async Task<IActionResult> ResolveByType([FromQuery] Guid fieldId, [FromQuery] AlertType type, CancellationToken ct)
     {
@@ -40,7 +38,6 @@ public class AlertsResolutionController : ControllerBase
         return Ok(new ResolveResponse(count, now));
     }
 
-    // ✅ POST /api/alerts/resolve/all?fieldId=...
     [HttpPost("resolve/all")]
     public async Task<IActionResult> ResolveAll([FromQuery] Guid fieldId, CancellationToken ct)
     {

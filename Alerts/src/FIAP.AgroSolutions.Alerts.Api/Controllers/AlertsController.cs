@@ -27,18 +27,4 @@ public class AlertsController : ControllerBase
 
         return Ok(await _service.GetAlertsByFieldAsync(fieldId, ct));
     }
-
-    [HttpPatch("{id:guid}/resolve")]
-    public async Task<IActionResult> Resolve(Guid id, CancellationToken ct)
-    {
-        try
-        {
-            await _commands.ResolveAsync(id, ct);
-            return NoContent();
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-    }
 }
