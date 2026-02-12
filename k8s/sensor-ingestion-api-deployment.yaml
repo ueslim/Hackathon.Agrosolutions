@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sensor-ingestion-api
+  namespace: default
+  labels:
+    app: sensor-ingestion-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sensor-ingestion-api
+  template:
+    metadata:
+      labels:
+        app: sensor-ingestion-api
+    spec:
+      containers:
+      - name: sensor-ingestion-api
+        image: your-dockerhub-username/agrosolutions-sensor-ingestion-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: ASPNETCORE_URLS
+          valueFrom:
+            configMapKeyRef:
+              name: agrosolutions-config
+              key: ASPNETCORE_URLS
+        - name: ASPNETCORE_ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: agrosolutions-config
+              key: ASPNETCORE_ENVIRONMENT
+        - name: ConnectionStrings__SensorIngestionDb
+          valueFrom:
+            secretKeyRef:
+              name: agrosolutions-secrets
+              key: SENSOR_INGESTION_DB_CONNECTION
+        - name: RabbitMQ__HostName
+          valueFrom:
+            configMapKeyRef:
+              name: agrosolutions-config
+              key: RABBITMQ_HOSTNAME
+        - name: RabbitMQ__Port
+          valueFrom:
+            configMapKeyRef:
+              name: agrosolutions-config
+              key: RABBITMQ_PORT
+        - name: RabbitMQ__UserName
+          valueFrom:
+            secretKeyRef:
+              name: agrosolutions-secrets
+              key: RABBITMQ_USERNAME
+        - name: RabbitMQ__Password
+          valueFrom:
+            secretKeyRef:
+              name: agrosolutions-secrets
+              key: RABBITMQ_PASSWORD
+        - name: Queues__SensorReadings
+          valueFrom:
+            configMapKeyRef:
+              name: agrosolutions-config
+              key: QUEUE_SENSOR_READINGS
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 40
+          periodSeconds: 30
+          timeoutSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sensor-ingestion-api
+  namespace: default
+  labels:
+    app: sensor-ingestion-api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: sensor-ingestion-api
+

@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sqlserver
+  namespace: default
+  labels:
+    app: sqlserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sqlserver
+  template:
+    metadata:
+      labels:
+        app: sqlserver
+    spec:
+      containers:
+      - name: sqlserver
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        ports:
+        - containerPort: 1433
+        env:
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: MSSQL_SA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: agrosolutions-secrets
+              key: SA_PASSWORD
+        - name: SA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: agrosolutions-secrets
+              key: SA_PASSWORD
+        - name: MSSQL_PID
+          value: "Developer"
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        volumeMounts:
+        - name: sqlserver-data
+          mountPath: /var/opt/mssql
+        livenessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $SA_PASSWORD -Q 'SELECT 1' || exit 1"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+        readinessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $SA_PASSWORD -Q 'SELECT 1' || exit 1"
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+      volumes:
+      - name: sqlserver-data
+        persistentVolumeClaim:
+          claimName: sqlserver-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sqlserver
+  namespace: default
+  labels:
+    app: sqlserver
+spec:
+  type: ClusterIP
+  ports:
+  - port: 1433
+    targetPort: 1433
+    protocol: TCP
+    name: sqlserver
+  selector:
+    app: sqlserver
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sqlserver-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+

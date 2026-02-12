@@ -1,0 +1,144 @@
+version: '3.8'
+
+services:
+  # Banco de dados SQL Server
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: agrosolutions-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${SA_PASSWORD}
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - agrosolutions-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -C || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  # Message Broker RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: agrosolutions-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USERNAME}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    ports:
+      - "5672:5672"   # Porta AMQP
+      - "15672:15672" # Interface de gerenciamento
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - agrosolutions-network
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Serviço API de Alertas
+  alerts-api:
+    build:
+      context: ./Alerts/src
+      dockerfile: FIAP.AgroSolutions.Alerts.Api/Dockerfile
+    container_name: agrosolutions-alerts-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__AlertsDb=${ALERTS_DB_CONNECTION}
+      - RabbitMQ__HostName=${RABBITMQ_HOSTNAME}
+      - RabbitMQ__Port=${RABBITMQ_PORT}
+      - RabbitMQ__UserName=${RABBITMQ_USERNAME}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+    ports:
+      - "${ALERTS_API_PORT:-5001}:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - agrosolutions-network
+    restart: unless-stopped
+
+  # Serviço API Farm
+  farm-api:
+    build:
+      context: ./Farm/src
+      dockerfile: FIAP.AgroSolutions.Farm.Api/Dockerfile
+    container_name: agrosolutions-farm-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__FarmDb=${FARM_DB_CONNECTION}
+      - JWT__Secret=${JWT_SECRET}
+    ports:
+      - "${FARM_API_PORT:-5002}:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - agrosolutions-network
+    restart: unless-stopped
+
+  # Serviço API de Ingestão de Sensores
+  sensor-ingestion-api:
+    build:
+      context: ./SensorIngestion/src
+      dockerfile: FIAP.AgroSolutions.SensorIngestion.Api/Dockerfile
+    container_name: agrosolutions-sensor-ingestion-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__SensorIngestionDb=${SENSOR_INGESTION_DB_CONNECTION}
+      - RabbitMQ__HostName=${RABBITMQ_HOSTNAME}
+      - RabbitMQ__Port=${RABBITMQ_PORT}
+      - RabbitMQ__UserName=${RABBITMQ_USERNAME}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+    ports:
+      - "${SENSOR_INGESTION_API_PORT:-5003}:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - agrosolutions-network
+    restart: unless-stopped
+
+  # Serviço API de Usuários
+  users-api:
+    build:
+      context: ./Users/src
+      dockerfile: FIAP.AgroSolutions.Users.Api/Dockerfile
+    container_name: agrosolutions-users-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__UsersDb=${USERS_DB_CONNECTION}
+    ports:
+      - "${USERS_API_PORT:-5004}:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - agrosolutions-network
+    restart: unless-stopped
+
+volumes:
+  sqlserver_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+
+networks:
+  agrosolutions-network:
+    driver: bridge
+

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agrosolutions-config
+  namespace: default
+data:
+  # Configuração do RabbitMQ
+  RABBITMQ_HOSTNAME: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  
+  # Portas da aplicação
+  ASPNETCORE_URLS: "http://+:8080"
+  ASPNETCORE_ENVIRONMENT: "Production"
+  
+  # Nomes das filas
+  QUEUE_SENSOR_READINGS: "sensor.readings"
+
