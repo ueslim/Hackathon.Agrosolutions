@@ -8,6 +8,7 @@ import type { FarmWithFieldsResponse, FieldResponse } from '../../core/models/fa
 import type { ReadingResponse } from '../../core/models/reading.model';
 import type { AlertResponse } from '../../core/models/alert.model';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import { Observable, EMPTY, forkJoin, tap, finalize, catchError, of } from 'rxjs';
 
 Chart.register(...registerables);
 
@@ -29,6 +30,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   loadingReadings = false;
   loadingAlerts = false;
   error = '';
+  isSimulating = false;
   private chart: Chart | null = null;
 
   constructor(
@@ -45,7 +47,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         this.fields = allFields;
         if (this.fields.length && !this.selectedFieldId) {
           this.selectedFieldId = this.fields[0].id;
-          this.loadData();
+          this.loadData().subscribe();
         }
       },
       error: () => (this.error = 'Erro ao carregar propriedades.'),
@@ -61,36 +63,56 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onFieldChange(): void {
-    this.loadData();
+    this.loadData().subscribe();
   }
 
-  loadData(): void {
+  simulateData(): void {
     if (!this.selectedFieldId) return;
+    this.isSimulating = true;
+    this.readingsService.simulateBurst(this.selectedFieldId).subscribe({
+      next: () => {
+        setTimeout(() => {
+          this.loadData().subscribe({
+            next: () => {},
+            error: () => (this.isSimulating = false),
+            complete: () => (this.isSimulating = false),
+          });
+        }, 3000);
+      },
+      error: () => (this.isSimulating = false),
+    });
+  }
+
+  loadData(): Observable<{ readings: ReadingResponse[]; alerts: AlertResponse[] }> {
+    if (!this.selectedFieldId) return EMPTY;
     this.loadingReadings = true;
     this.loadingAlerts = true;
-    this.readingsService.getByField(this.selectedFieldId).subscribe({
-      next: (data) => {
+    const readings$ = this.readingsService.getByField(this.selectedFieldId).pipe(
+      tap((data) => {
         this.readings = data;
-        this.loadingReadings = false;
-        this.buildChart();
-      },
-      error: () => {
+        setTimeout(() => {
+          this.buildChart();
+        }, 100);
+      }),
+      catchError(() => {
         this.readings = [];
-        this.loadingReadings = false;
-      },
-    });
-    this.alertsService.getByField(this.selectedFieldId).subscribe({
-      next: (data) => {
+        return of([]);
+      }),
+      finalize(() => (this.loadingReadings = false)),
+    );
+    const alerts$ = this.alertsService.getByField(this.selectedFieldId).pipe(
+      tap((data) => {
         this.alerts = (data || []).sort(
           (a, b) => new Date(b.triggeredAtUtc).getTime() - new Date(a.triggeredAtUtc).getTime(),
         );
-        this.loadingAlerts = false;
-      },
-      error: () => {
+      }),
+      catchError(() => {
         this.alerts = [];
-        this.loadingAlerts = false;
-      },
-    });
+        return of([]);
+      }),
+      finalize(() => (this.loadingAlerts = false)),
+    );
+    return forkJoin({ readings: readings$, alerts: alerts$ });
   }
 
   private buildChart(): void {

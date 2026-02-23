@@ -21,4 +21,10 @@ export class ReadingsService {
     if (toUtc) params = params.set('toUtc', toUtc);
     return this.http.get<ReadingResponse[]>(this.base, { params });
   }
+
+  simulateBurst(fieldId: string): Observable<void> {
+    const params = new HttpParams().set('fieldId', fieldId);
+    const url = `${environment.api.sensorIngestion}/api/simulate/burst`;
+    return this.http.post<void>(url, undefined, { params });
+  }
 }

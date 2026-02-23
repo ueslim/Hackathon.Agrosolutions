@@ -8,6 +8,21 @@
         <option [value]="f.id">{{ f.name }} ({{ f.crop }})</option>
       }
     </select>
+    @if (selectedFieldId) {
+      <div class="d-flex justify-content-end mt-2">
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          [disabled]="isSimulating"
+          (click)="simulateData()"
+        >
+          @if (isSimulating) {
+            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          }
+          Simular dados de sensores
+        </button>
+      </div>
+    }
   </div>
 </div>
 
