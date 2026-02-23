@@ -19,7 +19,7 @@ builder.Services.AddDbContext<UsersDbContext>(opt =>
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<UsersService>();
 
-// CORS - allow Angular frontend (dev and local production)
+// CORS - allow Angular frontend (dev and Docker/local production)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Total", policy =>
@@ -27,12 +27,39 @@ builder.Services.AddCors(options =>
         if (builder.Environment.IsDevelopment())
             policy.AllowAnyOrigin();
         else
-            policy.WithOrigins("http://localhost:4200", "https://localhost:4200");
+            policy.WithOrigins(
+                "http://localhost:4200",
+                "https://localhost:4200",
+                "http://127.0.0.1:4200",
+                "https://127.0.0.1:4200");
         policy.AllowAnyMethod().AllowAnyHeader();
     });
 });
 
 var app = builder.Build();
+
+// Handle CORS preflight (OPTIONS) immediately with explicit headers so browser gets Access-Control-Allow-Origin
+app.Use(async (context, next) =>
+{
+    if (context.Request.Method != "OPTIONS")
+    {
+        await next();
+        return;
+    }
+    var origin = context.Request.Headers.Origin.FirstOrDefault();
+    var allowed = new[] { "http://localhost:4200", "https://localhost:4200", "http://127.0.0.1:4200", "https://127.0.0.1:4200" };
+    if (!string.IsNullOrEmpty(origin) && allowed.Contains(origin, StringComparer.OrdinalIgnoreCase))
+    {
+        context.Response.Headers["Access-Control-Allow-Origin"] = origin;
+        context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS";
+        context.Response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept, Origin, X-Requested-With, x-dev-user-id";
+        context.Response.Headers["Access-Control-Max-Age"] = "86400";
+    }
+    context.Response.StatusCode = 204;
+});
+
+// CORS for actual requests (GET, POST, etc.)
+app.UseCors("Total");
 
 using (var scope = app.Services.CreateScope())
 {
@@ -47,7 +74,6 @@ using (var scope = app.Services.CreateScope())
 
 app.UseSwagger();
 app.UseSwaggerUI();
-app.UseCors("Total");
 app.MapControllers();
 app.MapGet("/health", () => Results.Ok("ok"));
 

@@ -1,0 +1,8 @@
+{
+  "/api/users": { "target": "http://localhost:5004", "secure": false },
+  "/api/farms": { "target": "http://localhost:5002", "secure": false },
+  "/api/fields": { "target": "http://localhost:5002", "secure": false },
+  "/api/readings": { "target": "http://localhost:5003", "secure": false },
+  "/api/simulate": { "target": "http://localhost:5003", "secure": false },
+  "/api/alerts": { "target": "http://localhost:5001", "secure": false }
+}

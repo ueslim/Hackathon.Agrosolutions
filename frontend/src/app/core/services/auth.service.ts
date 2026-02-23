@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap, catchError, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import type { LoginRequest, LoginResponse, UserResponse } from '../models/user.model';
+import type { LoginRequest, LoginResponse, UserResponse, CreateUserRequest } from '../models/user.model';
 
 const STORAGE_TOKEN = 'agro_token';
 const STORAGE_USER_ID = 'agro_user_id';
@@ -24,6 +24,10 @@ export class AuthService {
     private http: HttpClient,
     private router: Router,
   ) {}
+
+  register(body: CreateUserRequest): Observable<UserResponse | null> {
+    return this.http.post<UserResponse>(this.usersUrl, body).pipe(catchError(() => of(null)));
+  }
 
   login(credentials: LoginRequest): Observable<LoginResponse | null> {
     return this.http.post<LoginResponse>(`${this.usersUrl}/login`, {
