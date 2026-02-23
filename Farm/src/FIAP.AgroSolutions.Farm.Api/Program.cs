@@ -5,7 +5,6 @@ using FIAP.AgroSolutions.Farm.Infrastructure.Persistence;
 using FIAP.AgroSolutions.Farm.Infrastructure.Persistence.Seed;
 using FIAP.AgroSolutions.Farm.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,28 +24,9 @@ builder.Services.AddScoped<IFarmService, FarmService>();
 builder.Services.AddScoped<IFarmRepository, FarmRepository>();
 builder.Services.AddScoped<IFieldRepository, FieldRepository>();
 
-
-if (builder.Environment.IsDevelopment())
-{
-    //Bypass pra testar local
-    builder.Services.AddAuthentication(DevAuthHandler.Scheme)
-        .AddScheme<AuthenticationSchemeOptions, DevAuthHandler>(DevAuthHandler.Scheme, _ => { });
-}
-else
-{
-    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-       .AddJwtBearer(o =>
-       {
-           o.RequireHttpsMetadata = false;
-           o.TokenValidationParameters = new()
-           {
-               ValidateIssuer = false,
-               ValidateAudience = false,
-               ValidateIssuerSigningKey = false,
-               ValidateLifetime = false
-           };
-       });
-}
+// Auth: use x-dev-user-id in all environments so Angular + Docker work without JWT
+builder.Services.AddAuthentication(DevAuthHandler.Scheme)
+    .AddScheme<AuthenticationSchemeOptions, DevAuthHandler>(DevAuthHandler.Scheme, _ => { });
 
 builder.Services.AddAuthorization();
 
