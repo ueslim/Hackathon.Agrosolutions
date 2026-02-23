@@ -1,0 +1,60 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="h3 mb-0">Dashboard</h1>
+  <div class="w-50">
+    <label class="form-label small text-muted">Talhão</label>
+    <select class="form-select form-select-sm" [(ngModel)]="selectedFieldId" (ngModelChange)="onFieldChange()">
+      <option value="">Selecione um talhão</option>
+      @for (f of fields; track f.id) {
+        <option [value]="f.id">{{ f.name }} ({{ f.crop }})</option>
+      }
+    </select>
+  </div>
+</div>
+
+@if (error) {
+  <div class="alert alert-warning">{{ error }}</div>
+}
+
+<div class="row">
+  <div class="col-lg-8 mb-4">
+    <div class="card h-100">
+      <div class="card-header">Histórico de leituras</div>
+      <div class="card-body">
+        @if (loadingReadings) {
+          <p class="text-muted">Carregando...</p>
+        } @else if (!selectedFieldId) {
+          <p class="text-muted">Selecione um talhão.</p>
+        } @else if (!readings.length) {
+          <p class="text-muted">Nenhuma leitura para este talhão.</p>
+        } @else {
+          <div style="height: 320px;">
+            <canvas #readingsChart></canvas>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4 mb-4">
+    <div class="card h-100">
+      <div class="card-header">Alertas recentes</div>
+      <div class="card-body overflow-auto" style="max-height: 380px;">
+        @if (loadingAlerts) {
+          <p class="text-muted small">Carregando...</p>
+        } @else if (!alerts.length) {
+          <p class="text-muted small">Nenhum alerta.</p>
+        } @else {
+          <ul class="list-group list-group-flush">
+            @for (a of alerts; track a.id) {
+              <li class="list-group-item px-0">
+                <span class="badge bg-{{ severityClass(a.severity) }} me-2">{{ a.severity }}</span>
+                <span class="small">{{ a.type }}</span>
+                <p class="small mb-0 mt-1 text-muted">{{ a.message }}</p>
+                <small class="text-muted">{{ a.triggeredAtUtc | date:'short' }}</small>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  </div>
+</div>

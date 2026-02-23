@@ -50,21 +50,18 @@ else
 
 builder.Services.AddAuthorization();
 
-// CORS
-var isDevelopment = builder.Environment.IsDevelopment();
-
-if (isDevelopment)
+// CORS - allow Angular frontend (dev and local production)
+builder.Services.AddCors(options =>
 {
-    builder.Services.AddCors(options =>
+    options.AddPolicy("Total", policy =>
     {
-        options.AddPolicy("Total",
-            builder =>
-                builder
-                    .AllowAnyOrigin()
-                    .AllowAnyMethod()
-                    .AllowAnyHeader());
+        if (builder.Environment.IsDevelopment())
+            policy.AllowAnyOrigin();
+        else
+            policy.WithOrigins("http://localhost:4200", "https://localhost:4200");
+        policy.AllowAnyMethod().AllowAnyHeader();
     });
-}
+});
 
 
 var app = builder.Build();

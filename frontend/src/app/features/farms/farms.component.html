@@ -1,0 +1,92 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="h3 mb-0">Propriedades e talhões</h1>
+  <button class="btn btn-primary" type="button" (click)="openNewFarm()">Nova propriedade</button>
+</div>
+
+@if (error) {
+  <div class="alert alert-warning">{{ error }}</div>
+}
+
+@if (loading) {
+  <p class="text-muted">Carregando...</p>
+} @else {
+  @if (!farms.length && !showNewFarm) {
+    <div class="card">
+      <div class="card-body text-center text-muted py-5">
+        Nenhuma propriedade cadastrada. Clique em <strong>Nova propriedade</strong> para começar.
+      </div>
+    </div>
+  }
+
+  @if (showNewFarm) {
+    <div class="card mb-4">
+      <div class="card-header">Nova propriedade</div>
+      <div class="card-body">
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label class="form-label">Nome</label>
+            <input type="text" class="form-control" [(ngModel)]="newFarm.name" placeholder="Ex: Fazenda Sul" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Localização / descrição</label>
+            <input type="text" class="form-control" [(ngModel)]="newFarm.locationDescription" placeholder="Opcional" />
+          </div>
+          <div class="col-12 mt-2">
+            <button class="btn btn-primary me-2" type="button" (click)="submitNewFarm()">Salvar</button>
+            <button class="btn btn-outline-secondary" type="button" (click)="cancelNewFarm()">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  @for (farm of farms; track farm.id) {
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>{{ farm.name }}</span>
+        <button class="btn btn-sm btn-outline-primary" type="button" (click)="openNewField(farm.id)">Novo talhão</button>
+      </div>
+      <div class="card-body">
+        @if (farm.locationDescription) {
+          <p class="text-muted small mb-2">{{ farm.locationDescription }}</p>
+        }
+        @if (showNewField === farm.id) {
+          <div class="border rounded p-3 mb-3 bg-light">
+            <h6 class="mb-2">Novo talhão</h6>
+            <div class="row g-2">
+              <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm" [(ngModel)]="newField.name" placeholder="Nome" />
+              </div>
+              <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm" [(ngModel)]="newField.crop" placeholder="Cultura" />
+              </div>
+              <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm" [(ngModel)]="newField.boundaryDescription" placeholder="Limites (opcional)" />
+              </div>
+              <div class="col-12">
+                <button class="btn btn-sm btn-primary me-2" type="button" (click)="submitNewField(farm.id)">Salvar</button>
+                <button class="btn btn-sm btn-outline-secondary" type="button" (click)="cancelNewField()">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        }
+        @if (farm.fields && farm.fields.length) {
+          <ul class="list-group list-group-flush">
+            @for (field of farm.fields; track field.id) {
+              <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                <div>
+                  <strong>{{ field.name }}</strong> — {{ field.crop }}
+                  @if (field.boundaryDescription) {
+                    <span class="text-muted small">({{ field.boundaryDescription }})</span>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        } @else if (showNewField !== farm.id) {
+          <p class="text-muted small mb-0">Nenhum talhão. Clique em <strong>Novo talhão</strong>.</p>
+        }
+      </div>
+    </div>
+  }
+}
