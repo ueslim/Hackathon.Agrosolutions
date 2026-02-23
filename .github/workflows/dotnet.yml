@@ -46,6 +46,14 @@ jobs:
       working-directory: ./Users/src
       run: dotnet restore
 
+    - name: Restore dependencies - AgroSolutions.Tests
+      working-directory: .
+      run: dotnet restore AgroSolutions.Tests/AgroSolutions.Tests.csproj
+
+    - name: Build - AgroSolutions.Tests
+      working-directory: .
+      run: dotnet build AgroSolutions.Tests/AgroSolutions.Tests.csproj --no-restore -c Release
+
     - name: Build - Alerts
       working-directory: ./Alerts/src
       run: dotnet build --no-restore -c Release
@@ -61,6 +69,11 @@ jobs:
     - name: Build - Users
       working-directory: ./Users/src
       run: dotnet build --no-restore -c Release
+
+    # Unit tests - Domain/Core layer
+    - name: Test - AgroSolutions.Tests
+      working-directory: .
+      run: dotnet test AgroSolutions.Tests/AgroSolutions.Tests.csproj --no-build -c Release --verbosity normal
 
     # Etapas de teste (se existirem projetos de teste)
     - name: Test - Alerts
